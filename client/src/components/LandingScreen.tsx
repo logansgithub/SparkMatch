@@ -1,6 +1,14 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, Users, ArrowRight, ArrowLeft } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  QrCode,
+  Shuffle,
+  Skull,
+  Sparkles,
+  Users,
+} from "lucide-react";
 import { AVATAR_OPTIONS } from "../types";
 
 interface LandingScreenProps {
@@ -12,13 +20,11 @@ interface LandingScreenProps {
     revealWorstEnemy: boolean;
   }) => Promise<void>;
   onGoToJoin: () => void;
-  error: string | null;
 }
 
 export const LandingScreen: React.FC<LandingScreenProps> = ({
   onCreateRoom,
   onGoToJoin,
-  error,
 }) => {
   const [mode, setMode] = useState<"home" | "create">("home");
   const [hostName, setHostName] = useState("");
@@ -47,73 +53,78 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({
 
   return (
     <div className="w-full max-w-md mx-auto px-4 py-8">
-      {/* Brand Header */}
+      {/* Editorial Brand Header */}
       <motion.div
-        initial={{ opacity: 0, y: -12 }}
+        initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         className="text-center mb-8"
       >
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-marigold border-2 border-ink shadow-riso-sm text-xs font-display font-bold uppercase tracking-wider mb-4">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1A1A1E] border border-white/[0.1] text-[#F59E0B] text-[11px] font-sans font-bold uppercase tracking-[0.16em] mb-4">
           <Sparkles className="w-3.5 h-3.5" />
           Live Party Matcher
         </div>
-        <h1 className="text-5xl font-display font-bold tracking-tight text-ink leading-none">
-          Spark<span className="text-coral">Match</span>
+        <h1 className="text-5xl font-display font-extrabold tracking-tight text-[#F5F4F0] leading-none">
+          Spark<span className="text-[#FF5C38]">Match</span>
         </h1>
-        <p className="mt-3 text-base text-ink/75 font-medium max-w-xs mx-auto">
-          Answer 12 unhinged personality questions. Watch the room count down.
-          Find your closest wavelength.
+        <p className="mt-3.5 text-sm sm:text-base text-zinc-400 font-medium max-w-xs mx-auto leading-relaxed">
+          Twelve sharp prompts. One global optimal pairing. A synchronized
+          10-second reveal across the room.
         </p>
       </motion.div>
-
-      {error && (
-        <div className="mb-4 p-3.5 rounded-xl bg-coral/15 border-2 border-coral text-ink text-sm font-semibold">
-          {error}
-        </div>
-      )}
 
       {mode === "home" ? (
         <motion.div
           key="home"
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="riso-card p-6 space-y-4"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="editorial-card p-6 sm:p-7 space-y-5"
         >
-          <div className="grid grid-cols-3 gap-2 pb-2 text-center">
-            <div className="p-2.5 rounded-xl bg-cream border-2 border-ink">
-              <div className="text-xl mb-0.5">📱</div>
-              <div className="text-xs font-display font-bold">Scan QR</div>
+          {/* Three-step editorial strip */}
+          <div className="grid grid-cols-3 gap-2.5 text-center">
+            <div className="editorial-subcard p-3 flex flex-col items-center gap-1.5">
+              <QrCode className="w-4 h-4 text-[#FF5C38]" />
+              <div className="text-[11px] font-semibold text-zinc-300 tracking-wide">
+                Scan QR
+              </div>
             </div>
-            <div className="p-2.5 rounded-xl bg-cream border-2 border-ink">
-              <div className="text-xl mb-0.5">🧠</div>
-              <div className="text-xs font-display font-bold">12 Prompts</div>
+            <div className="editorial-subcard p-3 flex flex-col items-center gap-1.5">
+              <Shuffle className="w-4 h-4 text-[#F59E0B]" />
+              <div className="text-[11px] font-semibold text-zinc-300 tracking-wide">
+                12 Prompts
+              </div>
             </div>
-            <div className="p-2.5 rounded-xl bg-cream border-2 border-ink">
-              <div className="text-xl mb-0.5">⚡</div>
-              <div className="text-xs font-display font-bold">Sync Reveal</div>
+            <div className="editorial-subcard p-3 flex flex-col items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-[#FF5C38]" />
+              <div className="text-[11px] font-semibold text-zinc-300 tracking-wide">
+                Sync Reveal
+              </div>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setMode("create")}
-            className="riso-btn-coral w-full text-lg"
-          >
-            <Sparkles className="w-5 h-5" />
-            Host a Room
-          </button>
+          <div className="space-y-3 pt-1">
+            <button
+              type="button"
+              onClick={() => setMode("create")}
+              className="editorial-btn-primary w-full"
+            >
+              <Sparkles className="w-4 h-4" />
+              Host a Room
+              <ArrowRight className="w-4 h-4 ml-auto" />
+            </button>
 
-          <button
-            type="button"
-            onClick={onGoToJoin}
-            className="riso-btn-marigold w-full text-lg"
-          >
-            <Users className="w-5 h-5" />
-            Join with Code
-          </button>
+            <button
+              type="button"
+              onClick={onGoToJoin}
+              className="editorial-btn-secondary w-full"
+            >
+              <Users className="w-4 h-4 text-[#F59E0B]" />
+              Join with Code
+              <ArrowRight className="w-4 h-4 ml-auto text-zinc-400" />
+            </button>
+          </div>
 
-          <p className="text-center text-xs text-ink/60 pt-1">
-            No accounts, no downloads — just pass around the QR code.
+          <p className="text-center text-xs text-zinc-500 pt-1">
+            No accounts, no installs — share the QR code and play instantly.
           </p>
         </motion.div>
       ) : (
@@ -122,18 +133,18 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({
           initial={{ opacity: 0, x: 16 }}
           animate={{ opacity: 1, x: 0 }}
           onSubmit={handleSubmit}
-          className="riso-card p-6 space-y-5"
+          className="editorial-card p-6 sm:p-7 space-y-5"
         >
           <div className="flex items-center justify-between">
             <button
               type="button"
               onClick={() => setMode("home")}
-              className="inline-flex items-center gap-1.5 text-sm font-display font-bold text-ink/70 hover:text-ink min-h-[40px]"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-zinc-400 hover:text-[#F5F4F0] min-h-[48px] -ml-1 px-1 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               Back
             </button>
-            <span className="text-xs font-display font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-indigoParty/10 text-indigoParty border border-indigoParty/30">
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] px-2.5 py-1 rounded-md bg-[#FF5C38]/15 text-[#FF5C38] border border-[#FF5C38]/25">
               Host Setup
             </span>
           </div>
@@ -141,7 +152,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({
           <div>
             <label
               htmlFor="host-name"
-              className="block text-sm font-display font-bold mb-1.5"
+              className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2"
             >
               Your Host Name
             </label>
@@ -153,26 +164,26 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({
               value={hostName}
               onChange={(e) => setHostName(e.target.value)}
               placeholder="e.g., Alex"
-              className="riso-input"
+              className="editorial-input"
               autoFocus
             />
           </div>
 
           <div>
-            <span className="block text-sm font-display font-bold mb-2">
-              Pick Your Avatar
+            <span className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
+              Choose Avatar
             </span>
-            <div className="grid grid-cols-8 gap-1.5">
+            <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
               {AVATAR_OPTIONS.map((emoji) => (
                 <button
                   key={emoji}
                   type="button"
                   onClick={() => setAvatar(emoji)}
                   aria-label={`Select avatar ${emoji}`}
-                  className={`h-11 rounded-xl border-2 text-xl flex items-center justify-center transition-all ${
+                  className={`h-12 rounded-xl border text-xl flex items-center justify-center transition-all active:scale-95 ${
                     avatar === emoji
-                      ? "bg-marigold border-ink shadow-riso-sm scale-105"
-                      : "bg-cream border-ink/25 hover:border-ink"
+                      ? "bg-[#FF5C38]/20 border-[#FF5C38] scale-105"
+                      : "bg-[#121214] border-white/[0.08] hover:border-white/25"
                   }`}
                 >
                   {emoji}
@@ -181,70 +192,75 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({
             </div>
           </div>
 
-          <label className="flex items-start gap-3 p-3.5 rounded-xl bg-cream border-2 border-ink cursor-pointer">
-            <input
-              type="checkbox"
-              checked={hostParticipates}
-              onChange={(e) => setHostParticipates(e.target.checked)}
-              className="mt-0.5 w-5 h-5 accent-indigoParty rounded cursor-pointer"
-            />
-            <div>
-              <div className="text-sm font-display font-bold">
-                Include me in the matching
-              </div>
-              <div className="text-xs text-ink/65">
-                Leave unchecked to MC from a laptop or TV screen; check if you
-                want to take the quiz too!
-              </div>
-            </div>
-          </label>
-
-          {hostParticipates && (
-            <div>
-              <label
-                htmlFor="host-clue"
-                className="block text-sm font-display font-bold mb-1.5"
-              >
-                Your Spotting Clue{" "}
-                <span className="font-normal text-ink/55">(optional)</span>
-              </label>
+          <div className="space-y-2.5">
+            <label className="flex items-start gap-3 p-3.5 rounded-xl bg-[#121214] border border-white/[0.08] hover:border-white/20 transition-colors cursor-pointer min-h-[56px]">
               <input
-                id="host-clue"
-                type="text"
-                maxLength={80}
-                value={spottingClue}
-                onChange={(e) => setSpottingClue(e.target.value)}
-                placeholder="e.g., wearing red sneakers"
-                className="riso-input"
+                type="checkbox"
+                checked={hostParticipates}
+                onChange={(e) => setHostParticipates(e.target.checked)}
+                className="mt-1 w-4 h-4 accent-[#FF5C38] rounded cursor-pointer shrink-0"
               />
-            </div>
-          )}
+              <div>
+                <div className="text-sm font-semibold text-[#F5F4F0]">
+                  Include me in the matching
+                </div>
+                <div className="text-xs text-zinc-400 mt-0.5 leading-snug">
+                  Leave unchecked to MC from a laptop or TV; enable to take the
+                  quiz too.
+                </div>
+              </div>
+            </label>
 
-          <label className="flex items-start gap-3 p-3.5 rounded-xl bg-cream border-2 border-ink cursor-pointer">
-            <input
-              type="checkbox"
-              checked={revealWorstEnemy}
-              onChange={(e) => setRevealWorstEnemy(e.target.checked)}
-              className="mt-0.5 w-5 h-5 accent-coral rounded cursor-pointer"
-            />
-            <div>
-              <div className="text-sm font-display font-bold">
-                Also reveal each player's “Worst Enemy”
+            {hostParticipates && (
+              <div>
+                <label
+                  htmlFor="host-clue"
+                  className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2"
+                >
+                  Your Spotting Clue{" "}
+                  <span className="font-normal normal-case text-zinc-500">
+                    (optional)
+                  </span>
+                </label>
+                <input
+                  id="host-clue"
+                  type="text"
+                  maxLength={80}
+                  value={spottingClue}
+                  onChange={(e) => setSpottingClue(e.target.value)}
+                  placeholder="e.g., wearing red sneakers"
+                  className="editorial-input"
+                />
               </div>
-              <div className="text-xs text-ink/65">
-                Adds a chaotic bonus reveal showing the least similar person in
-                the room!
+            )}
+
+            <label className="flex items-start gap-3 p-3.5 rounded-xl bg-[#121214] border border-white/[0.08] hover:border-white/20 transition-colors cursor-pointer min-h-[56px]">
+              <input
+                type="checkbox"
+                checked={revealWorstEnemy}
+                onChange={(e) => setRevealWorstEnemy(e.target.checked)}
+                className="mt-1 w-4 h-4 accent-[#F59E0B] rounded cursor-pointer shrink-0"
+              />
+              <div>
+                <div className="text-sm font-semibold text-[#F5F4F0] flex items-center gap-1.5">
+                  <Skull className="w-3.5 h-3.5 text-[#F59E0B]" />
+                  Also reveal each player's “Worst Enemy”
+                </div>
+                <div className="text-xs text-zinc-400 mt-0.5 leading-snug">
+                  Adds a bonus nemesis reveal showing the least similar person
+                  in the room.
+                </div>
               </div>
-            </div>
-          </label>
+            </label>
+          </div>
 
           <button
             type="submit"
             disabled={submitting || !hostName.trim()}
-            className="riso-btn-coral w-full text-base"
+            className="editorial-btn-primary w-full"
           >
             {submitting ? "Creating Room..." : "Create Party Room"}
-            <ArrowRight className="w-5 h-5" />
+            <ArrowRight className="w-4 h-4" />
           </button>
         </motion.form>
       )}

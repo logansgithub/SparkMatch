@@ -480,7 +480,7 @@ export class RoomManager {
         const clue = partner?.spottingClue?.trim();
         return clue && clue.length > 0
           ? clue
-          : "A mysterious guest who left no spotting clue 👀";
+          : "A mysterious guest who left no spotting clue";
       });
   }
 

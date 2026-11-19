@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, Wifi, WifiOff } from "lucide-react";
+import { Toaster, toast } from "sonner";
 import { socket } from "./lib/socket";
 import {
   PublicRoomState,
@@ -25,7 +26,6 @@ function parseJoinCodeFromUrl(): string | null {
 
 function loadStoredSession(): StoredSession | null {
   try {
-    // Prefer per-tab sessionStorage first so multiple tabs on one device don't collide
     const tabRaw = window.sessionStorage.getItem(SESSION_KEY);
     if (tabRaw) {
       const parsed = JSON.parse(tabRaw) as StoredSession;
@@ -37,7 +37,6 @@ function loadStoredSession(): StoredSession | null {
     if (localRaw) {
       const parsed = JSON.parse(localRaw) as StoredSession;
       if (parsed?.roomCode && parsed?.playerId) {
-        // Don't hijack an explicit /join/:code guest link with a saved host session from another tab
         const joinFromUrl = parseJoinCodeFromUrl();
         if (joinFromUrl && parsed.hostToken) {
           return null;
@@ -82,11 +81,12 @@ export default function App() {
   const [hostShowingPlayerView, setHostShowingPlayerView] = useState(false);
 
   const [connected, setConnected] = useState<boolean>(socket.connected);
-  const [error, setError] = useState<string | null>(null);
+  const [hasConnectedOnce, setHasConnectedOnce] = useState<boolean>(
+    socket.connected
+  );
   const [reconnecting, setReconnecting] = useState<boolean>(() => {
     const saved = loadStoredSession();
     const joinFromUrl = parseJoinCodeFromUrl();
-    // Only auto-reconnect if we have a saved session matching the current URL (or on root /)
     return Boolean(
       saved && (!joinFromUrl || joinFromUrl === saved.roomCode.toUpperCase())
     );
@@ -130,7 +130,6 @@ export default function App() {
                 setRevealPayload(res.playerMatch.revealPayload);
               }
             }
-            setError(null);
           } else {
             clearSession();
           }
@@ -140,7 +139,6 @@ export default function App() {
     [clearSession]
   );
 
-  // Listen to browser navigation (back/forward)
   useEffect(() => {
     const onPopState = () => {
       const code = parseJoinCodeFromUrl();
@@ -156,10 +154,10 @@ export default function App() {
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
-  // Core Socket.IO lifecycle + event listeners
   useEffect(() => {
     const handleConnect = () => {
       setConnected(true);
+      setHasConnectedOnce(true);
       const saved = loadStoredSession();
       const joinCode = parseJoinCodeFromUrl();
       if (saved && (!joinCode || joinCode === saved.roomCode.toUpperCase())) {
@@ -196,7 +194,7 @@ export default function App() {
 
     const handleKicked = (payload: { reason?: string }) => {
       clearSession();
-      setError(payload?.reason ?? "You were removed from the room.");
+      toast.error(payload?.reason ?? "You were removed from the room.");
       window.history.replaceState({}, "", "/");
       setRouteMode("landing");
     };
@@ -224,8 +222,6 @@ export default function App() {
     };
   }, [attemptReconnect, clearSession]);
 
-  // --- Client -> Server actions ---
-
   const handleCreateRoom = async (params: {
     hostName: string;
     avatar: string;
@@ -233,7 +229,6 @@ export default function App() {
     hostParticipates: boolean;
     revealWorstEnemy: boolean;
   }) => {
-    setError(null);
     return new Promise<void>((resolve) => {
       socket.emit(
         "create_room",
@@ -255,8 +250,9 @@ export default function App() {
             saveStoredSession(nextSession);
             setSession(nextSession);
             if (res.roomState) setRoomState(res.roomState);
+            toast.success(`Room ${res.roomCode} created`);
           } else {
-            setError(res?.error ?? "Could not create room.");
+            toast.error(res?.error ?? "Could not create room.");
           }
           resolve();
         }
@@ -270,7 +266,6 @@ export default function App() {
     avatar: string;
     spottingClue: string;
   }) => {
-    setError(null);
     return new Promise<void>((resolve) => {
       socket.emit(
         "join_room",
@@ -291,8 +286,9 @@ export default function App() {
             setSession(nextSession);
             setRoomState(res.roomState);
             if (res.questions) setQuestions(res.questions);
+            toast.success(`Joined room ${res.roomState.code}`);
           } else {
-            setError(res?.error ?? "Could not join room.");
+            toast.error(res?.error ?? "Could not join room.");
           }
           resolve();
         }
@@ -301,9 +297,12 @@ export default function App() {
   };
 
   const emitHostAction = useCallback(
-    (event: string, extra: Record<string, unknown> = {}) => {
+    (
+      event: string,
+      extra: Record<string, unknown> = {},
+      successMessage?: string
+    ) => {
       if (!session?.hostToken) return Promise.resolve();
-      setError(null);
       return new Promise<void>((resolve) => {
         socket.emit(
           event,
@@ -314,7 +313,9 @@ export default function App() {
           },
           (res: { ok?: boolean; error?: string }) => {
             if (res && !res.ok && res.error) {
-              setError(res.error);
+              toast.error(res.error);
+            } else if (successMessage) {
+              toast.success(successMessage);
             }
             resolve();
           }
@@ -326,7 +327,6 @@ export default function App() {
 
   const handleSubmitAnswers = async (answers: Record<string, number>) => {
     if (!session) return;
-    setError(null);
     return new Promise<void>((resolve) => {
       socket.emit(
         "submit_answers",
@@ -337,7 +337,9 @@ export default function App() {
         },
         (res: { ok?: boolean; error?: string }) => {
           if (res && !res.ok && res.error) {
-            setError(res.error);
+            toast.error(res.error);
+          } else {
+            toast.success("Answers locked in");
           }
           resolve();
         }
@@ -350,7 +352,6 @@ export default function App() {
     window.history.pushState({}, "", "/");
     setUrlJoinCode("");
     setRouteMode("landing");
-    // Reconnect socket cleanly to leave server room
     socket.disconnect();
     socket.connect();
   };
@@ -361,7 +362,11 @@ export default function App() {
   const renderPlayerExperience = () => {
     if (!roomState || !session) return null;
 
-    if (roomState.phase === "QUIZ" && !me?.quizCompleted && questions.length > 0) {
+    if (
+      roomState.phase === "QUIZ" &&
+      !me?.quizCompleted &&
+      questions.length > 0
+    ) {
       return (
         <QuizScreen
           roomCode={roomState.code}
@@ -393,10 +398,11 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-dvh flex flex-col">
-      {/* Subtle connection indicator when offline */}
-      {!connected && (
-        <div className="bg-coral text-white text-xs font-display font-bold py-1.5 px-4 text-center flex items-center justify-center gap-1.5 border-b-2 border-ink">
+    <div className="min-h-dvh flex flex-col bg-[#121214] text-[#F5F4F0]">
+      <Toaster position="top-center" richColors theme="dark" />
+
+      {hasConnectedOnce && !connected && (
+        <div className="bg-[#FF5C38] text-[#121214] text-xs font-bold py-2 px-4 text-center flex items-center justify-center gap-1.5">
           <WifiOff className="w-3.5 h-3.5" />
           Reconnecting to SparkMatch server...
         </div>
@@ -405,8 +411,8 @@ export default function App() {
       <main className="flex-1 flex flex-col justify-center py-2">
         {reconnecting ? (
           <div className="w-full max-w-md mx-auto px-4 py-12 text-center">
-            <div className="riso-card p-6 inline-flex items-center gap-3 font-display font-bold">
-              <Wifi className="w-5 h-5 text-indigoParty animate-pulse" />
+            <div className="editorial-card p-6 inline-flex items-center gap-3 font-semibold text-sm text-zinc-200">
+              <Wifi className="w-5 h-5 text-[#FF5C38] animate-pulse" />
               Rejoining your SparkMatch room...
             </div>
           </div>
@@ -416,21 +422,15 @@ export default function App() {
               initialRoomCode={urlJoinCode}
               onJoinRoom={handleJoinRoom}
               onBack={() => {
-                setError(null);
                 window.history.pushState({}, "", "/");
                 setUrlJoinCode("");
                 setRouteMode("landing");
               }}
-              error={error}
             />
           ) : (
             <LandingScreen
               onCreateRoom={handleCreateRoom}
-              onGoToJoin={() => {
-                setError(null);
-                setRouteMode("join");
-              }}
-              error={error}
+              onGoToJoin={() => setRouteMode("join")}
             />
           )
         ) : isHost && !hostShowingPlayerView ? (
@@ -448,22 +448,45 @@ export default function App() {
               })
             }
             onAddBots={(count = 5) =>
-              emitHostAction("host_add_bots", { count })
+              emitHostAction(
+                "host_add_bots",
+                { count },
+                `Added ${count} test bots`
+              )
             }
             onKickPlayer={(targetPlayerId) =>
-              emitHostAction("host_kick_player", { targetPlayerId })
+              emitHostAction(
+                "host_kick_player",
+                { targetPlayerId },
+                "Player removed"
+              )
             }
-            onStartQuiz={() => emitHostAction("host_start_quiz")}
-            onCalculateMatches={() => emitHostAction("host_calculate_matches")}
-            onSendClues={() => emitHostAction("host_send_clues")}
+            onStartQuiz={() =>
+              emitHostAction("host_start_quiz", {}, "Quiz started")
+            }
+            onCalculateMatches={() =>
+              emitHostAction(
+                "host_calculate_matches",
+                {},
+                "Optimal matches locked in"
+              )
+            }
+            onSendClues={() =>
+              emitHostAction(
+                "host_send_clues",
+                {},
+                "Spotting clues sent to phones"
+              )
+            }
             onTriggerReveal={() => emitHostAction("host_trigger_reveal")}
-            onResetRoom={() => emitHostAction("host_reset_room")}
+            onResetRoom={() =>
+              emitHostAction("host_reset_room", {}, "Room reset for next round")
+            }
             onLeaveRoom={handleLeaveRoom}
             hasPersonalView={
               roomState.hostParticipates && roomState.phase !== "LOBBY"
             }
             onOpenMyPlayerView={() => setHostShowingPlayerView(true)}
-            error={error}
           />
         ) : (
           <div>
@@ -472,7 +495,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setHostShowingPlayerView(false)}
-                  className="riso-btn-white text-xs min-h-[40px] py-2 px-3.5"
+                  className="editorial-btn-secondary text-xs min-h-[48px] py-2 px-3.5"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   Back to Host Deck
