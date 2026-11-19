@@ -40,15 +40,23 @@ export interface MatchGroup {
   spicyDifference: MatchInsight; // Largest playful disagreement
 }
 
+export interface WorstEnemyInfo {
+  enemyId: string;
+  compatibility: number; // 0 to 100 integer
+  biggestClash: MatchInsight;
+}
+
 export type RoomPhase = "LOBBY" | "QUIZ" | "MATCHED" | "CLUES" | "REVEAL";
 
 export interface Room {
   code: string; // 4 uppercase letters (no ambiguous chars like O/I)
   hostToken: string; // Secret UUID for authenticating host actions
   hostParticipates: boolean;
+  revealWorstEnemy: boolean;
   phase: RoomPhase;
   players: Map<string, Player>;
   matches: MatchGroup[];
+  worstEnemies: Map<string, WorstEnemyInfo>; // playerId -> least similar player
   revealAt: number | null; // Absolute UTC timestamp (ms)
   lastActiveAt: number;
 }
@@ -68,6 +76,7 @@ export interface PublicRoomState {
   code: string;
   phase: RoomPhase;
   hostParticipates: boolean;
+  revealWorstEnemy: boolean;
   players: PublicPlayer[];
   participatingCount: number;
   completedCount: number;
@@ -84,11 +93,18 @@ export interface PartnerProfile {
   spottingClue: string;
 }
 
+export interface WorstEnemyReveal {
+  enemy: PartnerProfile;
+  compatibility: number;
+  biggestClash: MatchInsight;
+}
+
 export interface RevealPayload {
   revealAt: number;
   serverNow: number;
   match: MatchGroup;
   partners: PartnerProfile[];
+  worstEnemy?: WorstEnemyReveal;
 }
 
 export interface ReconnectMatchState {

@@ -41,6 +41,7 @@ export interface PublicRoomState {
   code: string;
   phase: RoomPhase;
   hostParticipates: boolean;
+  revealWorstEnemy: boolean;
   players: PublicPlayer[];
   participatingCount: number;
   completedCount: number;
@@ -57,11 +58,18 @@ export interface PartnerProfile {
   spottingClue: string;
 }
 
+export interface WorstEnemyReveal {
+  enemy: PartnerProfile;
+  compatibility: number;
+  biggestClash: MatchInsight;
+}
+
 export interface RevealPayload {
   revealAt: number;
   serverNow: number;
   match: MatchGroup;
   partners: PartnerProfile[];
+  worstEnemy?: WorstEnemyReveal;
 }
 
 export interface ReconnectMatchState {

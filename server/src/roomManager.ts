@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { QUESTIONS } from "./questions";
-import { computeRoomMatches } from "./matching";
+import { computeRoomMatches, computeWorstEnemies } from "./matching";
 import {
   MatchGroup,
   PartnerProfile,
@@ -10,6 +10,7 @@ import {
   ReconnectMatchState,
   RevealPayload,
   Room,
+  WorstEnemyReveal,
 } from "./types";
 
 // 4-letter room codes excluding ambiguous chars O, I, L, 0, 1
@@ -118,6 +119,7 @@ export class RoomManager {
     avatar: string;
     spottingClue: string;
     hostParticipates: boolean;
+    revealWorstEnemy?: boolean;
   }): { room: Room; hostPlayer: Player } {
     const code = this.generateRoomCode();
     const hostToken = crypto.randomUUID();
@@ -140,9 +142,11 @@ export class RoomManager {
       code,
       hostToken,
       hostParticipates: Boolean(params.hostParticipates),
+      revealWorstEnemy: Boolean(params.revealWorstEnemy),
       phase: "LOBBY",
       players: new Map([[playerId, hostPlayer]]),
       matches: [],
+      worstEnemies: new Map(),
       revealAt: null,
       lastActiveAt: Date.now(),
     };
@@ -286,6 +290,19 @@ export class RoomManager {
     return room;
   }
 
+  public toggleRevealWorstEnemy(
+    roomCode: string,
+    hostToken: string,
+    revealWorstEnemy: boolean
+  ): Room {
+    const room = this.assertHost(roomCode, hostToken);
+    if (room.phase === "REVEAL") {
+      throw new Error("Cannot change Worst Enemy reveal after reveal started.");
+    }
+    room.revealWorstEnemy = Boolean(revealWorstEnemy);
+    return room;
+  }
+
   public kickPlayer(
     roomCode: string,
     hostToken: string,
@@ -374,6 +391,7 @@ export class RoomManager {
 
     room.phase = "QUIZ";
     room.matches = [];
+    room.worstEnemies = new Map();
     room.revealAt = null;
 
     // Bots immediately complete the quiz with varied randomized answers
@@ -439,6 +457,7 @@ export class RoomManager {
     }
 
     room.matches = computeRoomMatches(completed, QUESTIONS);
+    room.worstEnemies = computeWorstEnemies(completed, QUESTIONS, room.matches);
     room.phase = "MATCHED";
     room.revealAt = null;
 
@@ -482,11 +501,32 @@ export class RoomManager {
         };
       });
 
+    let worstEnemy: WorstEnemyReveal | undefined;
+    if (room.revealWorstEnemy) {
+      const enemyInfo = room.worstEnemies.get(playerId);
+      if (enemyInfo) {
+        const enemyPlayer = room.players.get(enemyInfo.enemyId);
+        if (enemyPlayer) {
+          worstEnemy = {
+            enemy: {
+              id: enemyPlayer.id,
+              name: enemyPlayer.name,
+              avatar: enemyPlayer.avatar,
+              spottingClue: enemyPlayer.spottingClue,
+            },
+            compatibility: enemyInfo.compatibility,
+            biggestClash: enemyInfo.biggestClash,
+          };
+        }
+      }
+    }
+
     return {
       revealAt: room.revealAt ?? Date.now(),
       serverNow: Date.now(),
       match: group,
       partners,
+      ...(worstEnemy ? { worstEnemy } : {}),
     };
   }
 
@@ -556,6 +596,7 @@ export class RoomManager {
     const room = this.assertHost(roomCode, hostToken);
     room.phase = "LOBBY";
     room.matches = [];
+    room.worstEnemies = new Map();
     room.revealAt = null;
 
     for (const player of room.players.values()) {
@@ -587,6 +628,7 @@ export class RoomManager {
       code: room.code,
       phase: room.phase,
       hostParticipates: room.hostParticipates,
+      revealWorstEnemy: room.revealWorstEnemy,
       players,
       participatingCount: participating.length,
       completedCount,

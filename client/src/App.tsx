@@ -231,6 +231,7 @@ export default function App() {
     avatar: string;
     spottingClue: string;
     hostParticipates: boolean;
+    revealWorstEnemy: boolean;
   }) => {
     setError(null);
     return new Promise<void>((resolve) => {
@@ -439,6 +440,11 @@ export default function App() {
             onToggleParticipate={(val) =>
               emitHostAction("host_toggle_participate", {
                 hostParticipates: val,
+              })
+            }
+            onToggleWorstEnemy={(val) =>
+              emitHostAction("host_toggle_worst_enemy", {
+                revealWorstEnemy: val,
               })
             }
             onAddBots={(count = 5) =>

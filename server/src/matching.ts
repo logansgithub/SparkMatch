@@ -1,4 +1,10 @@
-import { MatchGroup, MatchInsight, Player, Question } from "./types";
+import {
+  MatchGroup,
+  MatchInsight,
+  Player,
+  Question,
+  WorstEnemyInfo,
+} from "./types";
 
 /**
  * Step 1: Question-level similarity in [0, 1].
@@ -637,4 +643,90 @@ export function computeRoomMatches(
       spicyDifference,
     };
   });
+}
+
+/**
+ * Computes each player's "Worst Enemy": the person in the room LEAST similar
+ * to them based on pairwise quiz compatibility (0..100).
+ * When non-partner candidates exist (rooms of 4+), excludes the player's own
+ * SparkMatch partner(s) so a player is never matched with their own nemesis.
+ */
+export function computeWorstEnemies(
+  players: Player[],
+  questions: Question[],
+  matches: MatchGroup[] = []
+): Map<string, WorstEnemyInfo> {
+  const result = new Map<string, WorstEnemyInfo>();
+  const n = players.length;
+  if (n < 2) return result;
+
+  const partnerMap = new Map<string, Set<string>>();
+  for (const group of matches) {
+    for (const pid of group.playerIds) {
+      const others = partnerMap.get(pid) ?? new Set<string>();
+      for (const otherId of group.playerIds) {
+        if (otherId !== pid) others.add(otherId);
+      }
+      partnerMap.set(pid, others);
+    }
+  }
+
+  for (let i = 0; i < n; i++) {
+    const player = players[i];
+    const partners = partnerMap.get(player.id) ?? new Set<string>();
+
+    const nonPartnerIndices: number[] = [];
+    const allOtherIndices: number[] = [];
+    for (let j = 0; j < n; j++) {
+      if (j === i) continue;
+      allOtherIndices.push(j);
+      if (!partners.has(players[j].id)) {
+        nonPartnerIndices.push(j);
+      }
+    }
+
+    const candidates =
+      nonPartnerIndices.length > 0 ? nonPartnerIndices : allOtherIndices;
+
+    let worstIdx = candidates[0];
+    let worstScore = Infinity;
+    let worstExactMatches = Infinity;
+
+    for (const j of candidates) {
+      const score = computePairwiseScore(player, players[j], questions);
+      // Tie-breaker: fewest exact question matches
+      let exactMatches = 0;
+      for (const q of questions) {
+        const a = player.answers[q.id];
+        const b = players[j].answers[q.id];
+        if (typeof a === "number" && typeof b === "number" && a === b) {
+          exactMatches += 1;
+        }
+      }
+
+      if (
+        score < worstScore ||
+        (score === worstScore && exactMatches < worstExactMatches)
+      ) {
+        worstScore = score;
+        worstExactMatches = exactMatches;
+        worstIdx = j;
+      }
+    }
+
+    const enemy = players[worstIdx];
+    const { spicyDifference } = computeGroupInsights(
+      [player, enemy],
+      players,
+      questions
+    );
+
+    result.set(player.id, {
+      enemyId: enemy.id,
+      compatibility: worstScore,
+      biggestClash: spicyDifference,
+    });
+  }
+
+  return result;
 }

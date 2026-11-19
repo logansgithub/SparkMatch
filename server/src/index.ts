@@ -67,6 +67,7 @@ io.on("connection", (socket) => {
         avatar: payload?.avatar ?? "✨",
         spottingClue: payload?.spottingClue ?? "",
         hostParticipates: Boolean(payload?.hostParticipates),
+        revealWorstEnemy: Boolean(payload?.revealWorstEnemy),
       });
 
       socket.join(room.code);
@@ -170,6 +171,25 @@ io.on("connection", (socket) => {
         payload?.roomCode ?? "",
         payload?.hostToken ?? "",
         Boolean(payload?.hostParticipates)
+      );
+      broadcastRoomState(room.code);
+      if (typeof ack === "function") ack({ ok: true });
+    } catch (err) {
+      if (typeof ack === "function") {
+        ack({
+          ok: false,
+          error: err instanceof Error ? err.message : "Action failed.",
+        });
+      }
+    }
+  });
+
+  socket.on("host_toggle_worst_enemy", (payload, ack) => {
+    try {
+      const room = roomManager.toggleRevealWorstEnemy(
+        payload?.roomCode ?? "",
+        payload?.hostToken ?? "",
+        Boolean(payload?.revealWorstEnemy)
       );
       broadcastRoomState(room.code);
       if (typeof ack === "function") ack({ ok: true });

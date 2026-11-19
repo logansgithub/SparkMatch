@@ -9,6 +9,7 @@ interface LandingScreenProps {
     avatar: string;
     spottingClue: string;
     hostParticipates: boolean;
+    revealWorstEnemy: boolean;
   }) => Promise<void>;
   onGoToJoin: () => void;
   error: string | null;
@@ -24,6 +25,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({
   const [avatar, setAvatar] = useState("🪩");
   const [spottingClue, setSpottingClue] = useState("");
   const [hostParticipates, setHostParticipates] = useState(false);
+  const [revealWorstEnemy, setRevealWorstEnemy] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -36,6 +38,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({
         avatar,
         spottingClue: spottingClue.trim(),
         hostParticipates,
+        revealWorstEnemy,
       });
     } finally {
       setSubmitting(false);
@@ -216,6 +219,24 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({
               />
             </div>
           )}
+
+          <label className="flex items-start gap-3 p-3.5 rounded-xl bg-cream border-2 border-ink cursor-pointer">
+            <input
+              type="checkbox"
+              checked={revealWorstEnemy}
+              onChange={(e) => setRevealWorstEnemy(e.target.checked)}
+              className="mt-0.5 w-5 h-5 accent-coral rounded cursor-pointer"
+            />
+            <div>
+              <div className="text-sm font-display font-bold">
+                Also reveal each player's “Worst Enemy”
+              </div>
+              <div className="text-xs text-ink/65">
+                Adds a chaotic bonus reveal showing the least similar person in
+                the room!
+              </div>
+            </div>
+          </label>
 
           <button
             type="submit"

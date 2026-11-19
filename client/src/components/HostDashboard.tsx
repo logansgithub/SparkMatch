@@ -20,6 +20,7 @@ interface HostDashboardProps {
   roomState: PublicRoomState;
   me: PublicPlayer | undefined;
   onToggleParticipate: (val: boolean) => Promise<void>;
+  onToggleWorstEnemy: (val: boolean) => Promise<void>;
   onAddBots: (count?: number) => Promise<void>;
   onKickPlayer: (targetPlayerId: string) => Promise<void>;
   onStartQuiz: () => Promise<void>;
@@ -45,6 +46,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
   roomState,
   me,
   onToggleParticipate,
+  onToggleWorstEnemy,
   onAddBots,
   onKickPlayer,
   onStartQuiz,
@@ -262,6 +264,32 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                   }
                   disabled={busyAction !== null}
                   className="w-5 h-5 accent-indigoParty cursor-pointer"
+                />
+              </label>
+            )}
+
+            {roomState.phase !== "REVEAL" && (
+              <label className="flex items-center justify-between gap-3 p-3 rounded-xl bg-coral/10 border-2 border-ink cursor-pointer">
+                <div>
+                  <div className="text-sm font-display font-bold">
+                    Also Reveal Worst Enemy 😈
+                  </div>
+                  <div className="text-xs text-ink/65">
+                    {roomState.revealWorstEnemy
+                      ? "Players will also see their least similar nemesis"
+                      : "Off — reveal closest match only"}
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={roomState.revealWorstEnemy}
+                  onChange={(e) =>
+                    runAction("toggle-enemy", () =>
+                      onToggleWorstEnemy(e.target.checked)
+                    )
+                  }
+                  disabled={busyAction !== null}
+                  className="w-5 h-5 accent-coral cursor-pointer"
                 />
               </label>
             )}

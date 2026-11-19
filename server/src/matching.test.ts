@@ -3,6 +3,7 @@ import {
   computeGroupInsights,
   computePairwiseScore,
   computeRoomMatches,
+  computeWorstEnemies,
   solveEvenMatchingExact,
   solveOptimalMatchingIndices,
   welfareWeight,
@@ -280,5 +281,82 @@ describe("SparkMatch Matching Algorithm", () => {
     expect(spicyDifference.questionId).toBe("q12");
     expect(spicyDifference.description).toContain("Alice");
     expect(spicyDifference.description).toContain("Bob");
+  });
+
+  it("worst enemy: picks the least similar non-partner in the room for each player", () => {
+    const lowAnswers: Record<string, number> = {
+      q1: 0,
+      q2: 1,
+      q3: 0,
+      q4: 1,
+      q5: 0,
+      q6: 1,
+      q7: 1,
+      q8: 0,
+      q9: 1,
+      q10: 0,
+      q11: 0,
+      q12: 1,
+    };
+    const highAnswers: Record<string, number> = {
+      q1: 3,
+      q2: 5,
+      q3: 3,
+      q4: 5,
+      q5: 3,
+      q6: 5,
+      q7: 5,
+      q8: 3,
+      q9: 5,
+      q10: 3,
+      q11: 3,
+      q12: 5,
+    };
+    const midAnswers: Record<string, number> = {
+      q1: 1,
+      q2: 3,
+      q3: 1,
+      q4: 3,
+      q5: 1,
+      q6: 3,
+      q7: 3,
+      q8: 1,
+      q9: 3,
+      q10: 1,
+      q11: 1,
+      q12: 3,
+    };
+
+    const alice = makePlayer("alice", "Alice", lowAnswers);
+    const bob = makePlayer("bob", "Bob", { ...lowAnswers, q2: 2 }); // super similar to Alice
+    const zelda = makePlayer("zelda", "Zelda", highAnswers); // 0% compatible with Alice!
+    const carl = makePlayer("carl", "Carl", midAnswers);
+
+    const players = [alice, bob, zelda, carl];
+    const matches = computeRoomMatches(players, QUESTIONS);
+    const enemies = computeWorstEnemies(players, QUESTIONS, matches);
+
+    expect(enemies.size).toBe(4);
+    // Alice's worst enemy must be Zelda (0% compatibility)
+    const aliceEnemy = enemies.get("alice");
+    expect(aliceEnemy?.enemyId).toBe("zelda");
+    expect(aliceEnemy?.compatibility).toBe(0);
+    expect(aliceEnemy?.biggestClash.description).toContain("Alice");
+    expect(aliceEnemy?.biggestClash.description).toContain("Zelda");
+
+    // Zelda's worst enemy must be Alice (0% compatibility)
+    const zeldaEnemy = enemies.get("zelda");
+    expect(zeldaEnemy?.enemyId).toBe("alice");
+    expect(zeldaEnemy?.compatibility).toBe(0);
+
+    // Nobody is ever their own worst enemy or paired with their own SparkMatch partner in a 4-player room
+    for (const group of matches) {
+      for (const pid of group.playerIds) {
+        const enemyId = enemies.get(pid)?.enemyId;
+        expect(enemyId).toBeDefined();
+        expect(enemyId).not.toBe(pid);
+        expect(group.playerIds).not.toContain(enemyId);
+      }
+    }
   });
 });

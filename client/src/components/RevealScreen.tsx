@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Flame, MapPin, Sparkles, Star, Users } from "lucide-react";
+import { Flame, MapPin, Skull, Sparkles, Star, Users } from "lucide-react";
 import { RevealPayload } from "../types";
 
 interface RevealScreenProps {
@@ -39,7 +39,7 @@ export const RevealScreen: React.FC<RevealScreenProps> = ({
   const secondsLeft = Math.ceil(remainingMs / 1000);
   const isRevealed = remainingMs <= 0;
   const isTrio = revealPayload.partners.length > 1;
-  const { match, partners } = revealPayload;
+  const { match, partners, worstEnemy } = revealPayload;
 
   return (
     <div className="w-full max-w-md mx-auto px-4 py-6">
@@ -200,6 +200,54 @@ export const RevealScreen: React.FC<RevealScreenProps> = ({
                 </p>
               </div>
             </div>
+
+            {/* Optional Worst Enemy (Nemesis) Reveal */}
+            {worstEnemy && (
+              <div className="pt-4 border-t-2 border-dashed border-ink/25 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 text-xs font-display font-bold uppercase tracking-wider text-ink">
+                    <Skull className="w-4 h-4 text-coral" />
+                    Your Worst Enemy
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-ink text-coral border-2 border-ink text-xs font-display font-bold">
+                    {worstEnemy.compatibility}% Match
+                  </span>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-ink text-cream border-2 border-ink shadow-riso-sm space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 shrink-0 rounded-xl bg-coral text-white border-2 border-cream flex items-center justify-center text-2xl">
+                      {worstEnemy.enemy.avatar}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[11px] font-display font-bold uppercase tracking-wider text-marigold">
+                        Least Similar in the Room
+                      </div>
+                      <div className="font-display font-bold text-lg text-cream truncate">
+                        {worstEnemy.enemy.name}
+                      </div>
+                      <div className="flex items-start gap-1 text-xs text-cream/75 mt-0.5">
+                        <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5 text-coral" />
+                        <span className="break-words">
+                          {worstEnemy.enemy.spottingClue?.trim()
+                            ? worstEnemy.enemy.spottingClue
+                            : "No spotting clue listed — keep your guard up!"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-lg bg-cream/10 border border-cream/20 space-y-1">
+                    <span className="inline-block px-2 py-0.5 rounded bg-marigold text-ink text-[10px] font-display font-bold uppercase">
+                      Biggest Clash: {worstEnemy.biggestClash.topicTag}
+                    </span>
+                    <p className="text-xs sm:text-sm text-cream/90 leading-snug">
+                      {worstEnemy.biggestClash.description}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </motion.div>
       </div>
