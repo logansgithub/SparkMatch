@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  calculateScaleSimilarity,
   computeGroupInsights,
   computePairwiseScore,
   computeRoomMatches,
@@ -73,6 +74,20 @@ function assertValidPartition(
 }
 
 describe("SparkMatch Matching Algorithm", () => {
+  it("uses non-linear Polarized Stance Mapping for scale similarity", () => {
+    expect(calculateScaleSimilarity(4, 5)).toBe(0.8);
+    expect(calculateScaleSimilarity(4, 3)).toBe(0.7);
+    expect(calculateScaleSimilarity(4, 5)).toBeGreaterThan(
+      calculateScaleSimilarity(4, 3)
+    );
+    expect(calculateScaleSimilarity(2, 4) === 0.4).toBe(true);
+    expect(calculateScaleSimilarity(2, 4)).toBe(0.4);
+    expect(calculateScaleSimilarity(1, 2)).toBe(0.8);
+    expect(calculateScaleSimilarity(2, 3)).toBe(0.7);
+    expect(calculateScaleSimilarity(1, 5)).toBe(0);
+    expect(calculateScaleSimilarity(3, 3)).toBe(1);
+  });
+
   it("computes exact pairwise compatibility for scale and choice questions", () => {
     const miniQuestions: Question[] = [
       {

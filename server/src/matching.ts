@@ -6,9 +6,33 @@ import {
   WorstEnemyInfo,
 } from "./types";
 
+const POLARIZED_STANCE_MAP: Record<number, number> = {
+  1: -2.0,
+  2: -1.2,
+  3: 0.0,
+  4: 1.2,
+  5: 2.0,
+};
+
+const MAX_STANCE_DISTANCE = 4.0;
+
+/**
+ * Non-linear Polarized Stance Mapping for 1..5 scale questions.
+ * Rewards agreement on the same side of neutral (e.g., 4 vs 5 = 0.80 > 4 vs 3 = 0.70)
+ * and penalizes crossing the disagree/agree divide (2 vs 4 = 0.40).
+ */
+export function calculateScaleSimilarity(a: number, b: number): number {
+  const clampedA = Math.max(1, Math.min(5, Math.round(a)));
+  const clampedB = Math.max(1, Math.min(5, Math.round(b)));
+  const posA = POLARIZED_STANCE_MAP[clampedA] ?? 0.0;
+  const posB = POLARIZED_STANCE_MAP[clampedB] ?? 0.0;
+  const similarity = 1 - Math.abs(posA - posB) / MAX_STANCE_DISTANCE;
+  return Math.max(0, Math.round(similarity * 10000) / 10000);
+}
+
 /**
  * Step 1: Question-level similarity in [0, 1].
- * - scale (1..5): 1 - |a - b| / 4
+ * - scale (1..5): non-linear Polarized Stance Mapping
  * - choice (0..3): 1 if a === b else 0
  */
 export function computeQuestionSimilarity(
@@ -17,8 +41,7 @@ export function computeQuestionSimilarity(
   b: number
 ): number {
   if (question.type === "scale") {
-    const diff = Math.abs(a - b);
-    return Math.max(0, 1 - diff / 4);
+    return calculateScaleSimilarity(a, b);
   }
   return a === b ? 1 : 0;
 }
