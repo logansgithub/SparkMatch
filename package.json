@@ -1,0 +1,22 @@
+{
+  "name": "sparkmatch",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SparkMatch — mobile-first, real-time multiplayer personality matching party game",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n SERVER,CLIENT -c blue,magenta \"npm run dev -w server\" \"npm run dev -w client\"",
+    "build": "npm run build -w client && npm run build -w server",
+    "start": "npm run start -w server",
+    "test": "npm run test -w server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

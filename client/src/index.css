@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #fff8ee;
+    background-image: radial-gradient(
+      rgba(26, 24, 38, 0.08) 1px,
+      transparent 1px
+    );
+    background-size: 18px 18px;
+    color: #1a1826;
+    font-family: "DM Sans", system-ui, -apple-system, sans-serif;
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  .riso-card {
+    @apply bg-white border-2 border-ink rounded-2xl shadow-riso;
+  }
+
+  .riso-card-cream {
+    @apply bg-cream border-2 border-ink rounded-2xl shadow-riso;
+  }
+
+  .riso-btn {
+    @apply min-h-[48px] px-5 py-3 font-display font-bold border-2 border-ink rounded-xl shadow-riso transition-all duration-100 active:translate-x-[2px] active:translate-y-[2px] active:shadow-riso-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:active:translate-x-0 disabled:active:translate-y-0 inline-flex items-center justify-center gap-2;
+  }
+
+  .riso-btn-coral {
+    @apply riso-btn bg-coral text-white hover:brightness-105;
+  }
+
+  .riso-btn-marigold {
+    @apply riso-btn bg-marigold text-ink hover:brightness-105;
+  }
+
+  .riso-btn-indigo {
+    @apply riso-btn bg-indigoParty text-white hover:brightness-110;
+  }
+
+  .riso-btn-white {
+    @apply riso-btn bg-white text-ink hover:bg-cream;
+  }
+
+  .riso-input {
+    @apply w-full min-h-[48px] px-4 py-3 bg-white border-2 border-ink rounded-xl text-ink placeholder:text-ink/40 font-medium focus:outline-none focus:ring-2 focus:ring-indigoParty focus:ring-offset-1;
+  }
+}
+
+/* 3D card flip utilities */
+.flip-perspective {
+  perspective: 1400px;
+}
+
+.flip-preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.flip-backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.flip-rotate-y-180 {
+  transform: rotateY(180deg);
+}
