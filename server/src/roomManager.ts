@@ -1,5 +1,11 @@
 import crypto from "crypto";
-import { QUESTIONS } from "./questions";
+import {
+  DEFAULT_PACK_ID,
+  getPublicPackMetas,
+  getQuestionPack,
+  getQuestionPackOrDefault,
+  toPackMeta,
+} from "./questionPacks";
 import { computeRoomMatches, computeWorstEnemies } from "./matching";
 import {
   MatchGroup,
@@ -7,6 +13,7 @@ import {
   Player,
   PublicPlayer,
   PublicRoomState,
+  Question,
   ReconnectMatchState,
   RevealPayload,
   Room,
@@ -99,10 +106,14 @@ export class RoomManager {
     throw new Error("Could not allocate a unique room code.");
   }
 
-  private generateBotAnswers(): Record<string, number> {
+  public getRoomQuestions(room: Room): Question[] {
+    return getQuestionPackOrDefault(room.selectedPackId).questions;
+  }
+
+  private generateBotAnswers(questions: Question[]): Record<string, number> {
     const answers: Record<string, number> = {};
-    // Slightly varied random answers so rooms produce realistic rare matches and contrasts
-    for (const q of QUESTIONS) {
+    // Slightly varied random answers compatible with the active question pack
+    for (const q of questions) {
       if (q.type === "scale") {
         answers[q.id] = Math.floor(Math.random() * 5) + 1; // 1..5
       } else {
@@ -143,6 +154,7 @@ export class RoomManager {
       hostToken,
       hostParticipates: Boolean(params.hostParticipates),
       revealWorstEnemy: Boolean(params.revealWorstEnemy),
+      selectedPackId: DEFAULT_PACK_ID,
       phase: "LOBBY",
       players: new Map([[playerId, hostPlayer]]),
       matches: [],
@@ -303,6 +315,31 @@ export class RoomManager {
     return room;
   }
 
+  public selectPack(
+    roomCode: string,
+    hostToken: string,
+    packId: string
+  ): Room {
+    const room = this.assertHost(roomCode, hostToken);
+    if (room.phase !== "LOBBY") {
+      throw new Error("Cannot change the question pack after the quiz starts.");
+    }
+    const pack = getQuestionPack(packId);
+    if (!pack) {
+      throw new Error(`Unknown question pack "${packId}".`);
+    }
+    room.selectedPackId = pack.id;
+
+    // Refresh any existing lobby bots so their answers match the active pack
+    for (const player of room.players.values()) {
+      if (player.isBot) {
+        player.answers = this.generateBotAnswers(pack.questions);
+      }
+    }
+
+    return room;
+  }
+
   public kickPlayer(
     roomCode: string,
     hostToken: string,
@@ -343,6 +380,8 @@ export class RoomManager {
       (b) => !existingNames.has(b.name.toLowerCase())
     );
 
+    const activeQuestions = this.getRoomQuestions(room);
+
     let added = 0;
     for (let i = 0; i < safeCount; i++) {
       if (room.players.size >= 60) break;
@@ -354,7 +393,7 @@ export class RoomManager {
       };
 
       const botId = crypto.randomUUID();
-      const answers = this.generateBotAnswers();
+      const answers = this.generateBotAnswers(activeQuestions);
       const bot: Player = {
         id: botId,
         socketId: null,
@@ -394,11 +433,15 @@ export class RoomManager {
     room.worstEnemies = new Map();
     room.revealAt = null;
 
-    // Bots immediately complete the quiz with varied randomized answers
+    const activeQuestions = this.getRoomQuestions(room);
+    // Bots immediately complete the quiz with varied randomized answers for the active pack
     for (const player of room.players.values()) {
       if (player.isBot) {
-        if (Object.keys(player.answers).length < QUESTIONS.length) {
-          player.answers = this.generateBotAnswers();
+        const hasAllActiveAnswers = activeQuestions.every(
+          (q) => typeof player.answers[q.id] === "number"
+        );
+        if (!hasAllActiveAnswers) {
+          player.answers = this.generateBotAnswers(activeQuestions);
         }
         player.quizCompleted = true;
       }
@@ -421,8 +464,9 @@ export class RoomManager {
       throw new Error("Player not found in room.");
     }
 
+    const activeQuestions = this.getRoomQuestions(room);
     const sanitized: Record<string, number> = {};
-    for (const q of QUESTIONS) {
+    for (const q of activeQuestions) {
       const val = answers[q.id];
       if (typeof val !== "number" || Number.isNaN(val)) {
         throw new Error(`Missing answer for question ${q.id}`);
@@ -456,8 +500,13 @@ export class RoomManager {
       );
     }
 
-    room.matches = computeRoomMatches(completed, QUESTIONS);
-    room.worstEnemies = computeWorstEnemies(completed, QUESTIONS, room.matches);
+    const activeQuestions = this.getRoomQuestions(room);
+    room.matches = computeRoomMatches(completed, activeQuestions);
+    room.worstEnemies = computeWorstEnemies(
+      completed,
+      activeQuestions,
+      room.matches
+    );
     room.phase = "MATCHED";
     room.revealAt = null;
 
@@ -599,9 +648,12 @@ export class RoomManager {
     room.worstEnemies = new Map();
     room.revealAt = null;
 
+    const activeQuestions = this.getRoomQuestions(room);
     for (const player of room.players.values()) {
       player.quizCompleted = false;
-      player.answers = player.isBot ? this.generateBotAnswers() : {};
+      player.answers = player.isBot
+        ? this.generateBotAnswers(activeQuestions)
+        : {};
     }
 
     return room;
@@ -623,12 +675,16 @@ export class RoomManager {
 
     const participating = this.getParticipatingPlayers(room);
     const completedCount = participating.filter((p) => p.quizCompleted).length;
+    const activePack = getQuestionPackOrDefault(room.selectedPackId);
 
     return {
       code: room.code,
       phase: room.phase,
       hostParticipates: room.hostParticipates,
       revealWorstEnemy: room.revealWorstEnemy,
+      selectedPackId: activePack.id,
+      selectedPack: toPackMeta(activePack),
+      availablePacks: getPublicPackMetas(),
       players,
       participatingCount: participating.length,
       completedCount,

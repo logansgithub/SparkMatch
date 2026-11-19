@@ -37,11 +37,24 @@ export interface PublicPlayer {
   quizCompleted: boolean;
 }
 
+export interface QuestionPackMeta {
+  id: string;
+  title: string;
+  subtitle: string;
+  icon: string;
+  accentColor: string;
+  description: string;
+  questionCount: number;
+}
+
 export interface PublicRoomState {
   code: string;
   phase: RoomPhase;
   hostParticipates: boolean;
   revealWorstEnemy: boolean;
+  selectedPackId: string;
+  selectedPack: QuestionPackMeta;
+  availablePacks: QuestionPackMeta[];
   players: PublicPlayer[];
   participatingCount: number;
   completedCount: number;

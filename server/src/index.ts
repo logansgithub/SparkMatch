@@ -5,7 +5,6 @@ import fs from "fs";
 import cors from "cors";
 import { Server } from "socket.io";
 import { RoomManager } from "./roomManager";
-import { QUESTIONS } from "./questions";
 
 const PORT = Number(process.env.PORT) || 3000;
 const app = express();
@@ -106,17 +105,20 @@ io.on("connection", (socket) => {
       socket.join(room.code);
       const roomState = roomManager.serializePublicState(room);
 
+      const activeQuestions =
+        room.phase === "QUIZ" ? roomManager.getRoomQuestions(room) : undefined;
+
       if (typeof ack === "function") {
         ack({
           ok: true,
           playerId: player.id,
           roomState,
-          questions: room.phase === "QUIZ" ? QUESTIONS : undefined,
+          questions: activeQuestions,
         });
       }
 
-      if (room.phase === "QUIZ") {
-        socket.emit("quiz_started", { questions: QUESTIONS });
+      if (activeQuestions) {
+        socket.emit("quiz_started", { questions: activeQuestions });
       }
 
       broadcastRoomState(room.code);
@@ -149,7 +151,10 @@ io.on("connection", (socket) => {
           ok: true,
           roomState,
           isHostVerified,
-          questions: room.phase === "QUIZ" ? QUESTIONS : undefined,
+          questions:
+            room.phase === "QUIZ"
+              ? roomManager.getRoomQuestions(room)
+              : undefined,
           playerMatch,
         });
       }
@@ -198,6 +203,26 @@ io.on("connection", (socket) => {
         ack({
           ok: false,
           error: err instanceof Error ? err.message : "Action failed.",
+        });
+      }
+    }
+  });
+
+  socket.on("host_select_pack", (payload, ack) => {
+    try {
+      const room = roomManager.selectPack(
+        payload?.roomCode ?? "",
+        payload?.hostToken ?? "",
+        String(payload?.packId ?? "")
+      );
+      broadcastRoomState(room.code);
+      if (typeof ack === "function") ack({ ok: true });
+    } catch (err) {
+      if (typeof ack === "function") {
+        ack({
+          ok: false,
+          error:
+            err instanceof Error ? err.message : "Failed to select question pack.",
         });
       }
     }
@@ -257,7 +282,9 @@ io.on("connection", (socket) => {
         payload?.hostToken ?? ""
       );
       broadcastRoomState(room.code);
-      io.to(room.code).emit("quiz_started", { questions: QUESTIONS });
+      io.to(room.code).emit("quiz_started", {
+        questions: roomManager.getRoomQuestions(room),
+      });
       if (typeof ack === "function") ack({ ok: true });
     } catch (err) {
       if (typeof ack === "function") {

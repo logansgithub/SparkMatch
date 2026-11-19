@@ -13,6 +13,26 @@ export interface Question {
   topicTag: string;
 }
 
+export interface QuestionPack {
+  id: string;
+  title: string;
+  subtitle: string;
+  icon: string; // Lucide icon name or emoji
+  accentColor: string; // Hex or Tailwind accent
+  description: string;
+  questions: Question[];
+}
+
+export interface QuestionPackMeta {
+  id: string;
+  title: string;
+  subtitle: string;
+  icon: string;
+  accentColor: string;
+  description: string;
+  questionCount: number;
+}
+
 export interface Player {
   id: string;
   socketId: string | null;
@@ -53,6 +73,7 @@ export interface Room {
   hostToken: string; // Secret UUID for authenticating host actions
   hostParticipates: boolean;
   revealWorstEnemy: boolean;
+  selectedPackId: string;
   phase: RoomPhase;
   players: Map<string, Player>;
   matches: MatchGroup[];
@@ -77,6 +98,9 @@ export interface PublicRoomState {
   phase: RoomPhase;
   hostParticipates: boolean;
   revealWorstEnemy: boolean;
+  selectedPackId: string;
+  selectedPack: QuestionPackMeta;
+  availablePacks: QuestionPackMeta[];
   players: PublicPlayer[];
   participatingCount: number;
   completedCount: number;

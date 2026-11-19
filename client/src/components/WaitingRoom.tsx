@@ -1,7 +1,30 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { CheckCircle2, Clock, Sparkles, Users } from "lucide-react";
+import {
+  Briefcase,
+  CheckCircle2,
+  Clock,
+  Compass,
+  Flame,
+  Moon,
+  Sparkles,
+  Users,
+} from "lucide-react";
 import { PublicPlayer, PublicRoomState } from "../types";
+
+function renderPackIcon(iconName: string, className = "w-3.5 h-3.5") {
+  switch (iconName) {
+    case "Briefcase":
+      return <Briefcase className={className} />;
+    case "Moon":
+      return <Moon className={className} />;
+    case "Compass":
+      return <Compass className={className} />;
+    case "Flame":
+    default:
+      return <Flame className={className} />;
+  }
+}
 
 interface WaitingRoomProps {
   roomState: PublicRoomState;
@@ -41,6 +64,28 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
             {roomState.participatingCount} playing
           </span>
         </div>
+
+        {/* Live-synced Event Pack Theme Chip */}
+        {roomState.selectedPack && (
+          <motion.div
+            key={roomState.selectedPack.id}
+            initial={{ scale: 0.96, opacity: 0.7 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.2 }}
+            className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-2xl bg-cream border-2 border-ink shadow-riso-sm text-[11px] sm:text-xs font-display font-bold text-ink max-w-full leading-snug"
+          >
+            <span
+              className="w-5 h-5 shrink-0 rounded-full text-white flex items-center justify-center border border-ink"
+              style={{ backgroundColor: roomState.selectedPack.accentColor }}
+            >
+              {renderPackIcon(roomState.selectedPack.icon, "w-3 h-3")}
+            </span>
+            <span>
+              Theme: {roomState.selectedPack.title} •{" "}
+              {roomState.selectedPack.questionCount} Questions
+            </span>
+          </motion.div>
+        )}
 
         <motion.div
           animate={{ rotate: [0, -6, 6, 0], scale: [1, 1.06, 1] }}

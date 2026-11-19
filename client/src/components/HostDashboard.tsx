@@ -2,10 +2,15 @@ import React, { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import {
   Bot,
+  Briefcase,
   Check,
   CheckCircle2,
+  Compass,
   Copy,
   Eye,
+  Flame,
+  Layers,
+  Moon,
   Play,
   RotateCcw,
   Sparkles,
@@ -16,11 +21,26 @@ import {
 } from "lucide-react";
 import { PublicPlayer, PublicRoomState } from "../types";
 
+function renderPackIcon(iconName: string, className = "w-4 h-4") {
+  switch (iconName) {
+    case "Briefcase":
+      return <Briefcase className={className} />;
+    case "Moon":
+      return <Moon className={className} />;
+    case "Compass":
+      return <Compass className={className} />;
+    case "Flame":
+    default:
+      return <Flame className={className} />;
+  }
+}
+
 interface HostDashboardProps {
   roomState: PublicRoomState;
   me: PublicPlayer | undefined;
   onToggleParticipate: (val: boolean) => Promise<void>;
   onToggleWorstEnemy: (val: boolean) => Promise<void>;
+  onSelectPack: (packId: string) => Promise<void>;
   onAddBots: (count?: number) => Promise<void>;
   onKickPlayer: (targetPlayerId: string) => Promise<void>;
   onStartQuiz: () => Promise<void>;
@@ -47,6 +67,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
   me,
   onToggleParticipate,
   onToggleWorstEnemy,
+  onSelectPack,
   onAddBots,
   onKickPlayer,
   onStartQuiz,
@@ -442,8 +463,99 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
           </div>
         </div>
 
-        {/* Right Column: Live Player Roster */}
-        <div className="md:col-span-7 riso-card p-5 space-y-4">
+        {/* Right Column: Event Deck Selector + Live Player Roster */}
+        <div className="md:col-span-7 space-y-5">
+          {/* Event Deck Selector (Interactive in LOBBY, Locked Badge after Quiz Starts) */}
+          {roomState.phase === "LOBBY" ? (
+            <div className="riso-card p-5 space-y-3.5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Layers className="w-5 h-5 text-coral" />
+                  <h2 className="text-lg font-display font-bold">
+                    Event Question Deck
+                  </h2>
+                </div>
+                <span className="text-xs font-display font-bold text-ink/60">
+                  Pick your vibe
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {roomState.availablePacks.map((pack) => {
+                  const isSelected = pack.id === roomState.selectedPackId;
+                  return (
+                    <button
+                      key={pack.id}
+                      type="button"
+                      disabled={busyAction !== null}
+                      onClick={() =>
+                        runAction(`pack-${pack.id}`, () => onSelectPack(pack.id))
+                      }
+                      aria-pressed={isSelected}
+                      className={`text-left p-3.5 rounded-xl border-2 transition-all min-h-[96px] flex flex-col justify-between gap-2 ${
+                        isSelected
+                          ? "border-coral ring-2 ring-coral/40 bg-marigold/20 shadow-riso-sm"
+                          : "border-ink/25 bg-cream/60 hover:border-ink hover:bg-cream"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className="w-8 h-8 shrink-0 rounded-lg border-2 border-ink text-white flex items-center justify-center"
+                            style={{ backgroundColor: pack.accentColor }}
+                          >
+                            {renderPackIcon(pack.icon, "w-4 h-4")}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="font-display font-bold text-sm leading-tight text-ink truncate">
+                              {pack.title}
+                            </div>
+                            <div className="text-[11px] font-bold text-ink/55">
+                              {pack.questionCount} Questions
+                            </div>
+                          </div>
+                        </div>
+                        {isSelected && (
+                          <span className="w-5 h-5 shrink-0 rounded-full bg-coral text-white border border-ink flex items-center justify-center">
+                            <Check className="w-3 h-3" />
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-ink/75 leading-snug line-clamp-2">
+                        {pack.description}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="riso-card px-4 py-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span
+                  className="w-8 h-8 shrink-0 rounded-lg border-2 border-ink text-white flex items-center justify-center"
+                  style={{ backgroundColor: roomState.selectedPack.accentColor }}
+                >
+                  {renderPackIcon(roomState.selectedPack.icon, "w-4 h-4")}
+                </span>
+                <div className="min-w-0">
+                  <div className="text-[10px] font-display font-bold uppercase tracking-wider text-ink/55">
+                    Active Question Deck
+                  </div>
+                  <div className="font-display font-bold text-sm text-ink truncate">
+                    {roomState.selectedPack.title} •{" "}
+                    {roomState.selectedPack.questionCount} Questions
+                  </div>
+                </div>
+              </div>
+              <span className="text-[11px] font-display font-bold px-2 py-0.5 rounded bg-cream border border-ink/25 text-ink/60 shrink-0">
+                Locked
+              </span>
+            </div>
+          )}
+
+          {/* Live Player Roster */}
+          <div className="riso-card p-5 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Users className="w-5 h-5 text-indigoParty" />
@@ -540,6 +652,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                 </div>
               );
             })}
+          </div>
           </div>
         </div>
       </div>

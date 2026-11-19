@@ -447,6 +447,9 @@ export default function App() {
                 revealWorstEnemy: val,
               })
             }
+            onSelectPack={(packId) =>
+              emitHostAction("host_select_pack", { packId })
+            }
             onAddBots={(count = 5) =>
               emitHostAction("host_add_bots", { count })
             }

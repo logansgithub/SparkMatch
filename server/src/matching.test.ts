@@ -10,6 +10,8 @@ import {
   welfareWeight,
 } from "./matching";
 import { QUESTIONS } from "./questions";
+import { DEFAULT_PACK_ID, QUESTION_PACKS } from "./questionPacks";
+import { RoomManager } from "./roomManager";
 import { Player, Question } from "./types";
 
 function makePlayer(
@@ -372,6 +374,106 @@ describe("SparkMatch Matching Algorithm", () => {
         expect(enemyId).not.toBe(pid);
         expect(group.playerIds).not.toContain(enemyId);
       }
+    }
+  });
+
+  it("question packs: all 4 curated decks load valid question schemas", () => {
+    expect(QUESTION_PACKS).toHaveLength(4);
+    const packIds = QUESTION_PACKS.map((p) => p.id);
+    expect(packIds).toContain(DEFAULT_PACK_ID);
+    expect(packIds).toEqual([
+      "house-party",
+      "work-offsite",
+      "late-night",
+      "campfire",
+    ]);
+
+    for (const pack of QUESTION_PACKS) {
+      expect(pack.title.trim().length).toBeGreaterThan(0);
+      expect(pack.subtitle.trim().length).toBeGreaterThan(0);
+      expect(pack.icon.trim().length).toBeGreaterThan(0);
+      expect(pack.accentColor.trim().length).toBeGreaterThan(0);
+      expect(pack.description.trim().length).toBeGreaterThan(0);
+      expect(pack.questions.length).toBeGreaterThanOrEqual(10);
+      expect(pack.questions.length).toBeLessThanOrEqual(12);
+
+      const seenIds = new Set<string>();
+      let scaleCount = 0;
+      let choiceCount = 0;
+
+      for (const q of pack.questions) {
+        expect(seenIds.has(q.id)).toBe(false);
+        seenIds.add(q.id);
+        expect(q.prompt.trim().length).toBeGreaterThan(0);
+        expect(q.topicTag.trim().length).toBeGreaterThan(0);
+
+        if (q.type === "scale") {
+          scaleCount += 1;
+          expect(q.lowLabel && q.lowLabel.trim().length).toBeTruthy();
+          expect(q.highLabel && q.highLabel.trim().length).toBeTruthy();
+        } else {
+          choiceCount += 1;
+          expect(q.options).toHaveLength(4);
+          for (const opt of q.options ?? []) {
+            expect(opt.trim().length).toBeGreaterThan(0);
+          }
+        }
+      }
+
+      // Balanced mix of scale and choice questions
+      expect(scaleCount).toBeGreaterThanOrEqual(4);
+      expect(choiceCount).toBeGreaterThanOrEqual(4);
+    }
+  });
+
+  it("question packs: compatibility, rarity insights, and bot generation work across every pack", () => {
+    const manager = new RoomManager();
+    try {
+      for (const pack of QUESTION_PACKS) {
+        const { room } = manager.createRoom({
+          socketId: `host-sock-${pack.id}`,
+          hostName: "Host",
+          avatar: "🪩",
+          spottingClue: "",
+          hostParticipates: false,
+          revealWorstEnemy: true,
+        });
+
+        // Add bots before switching packs to verify bot answers stay synced
+        manager.addBots(room.code, room.hostToken, 6);
+        manager.selectPack(room.code, room.hostToken, pack.id);
+        expect(room.selectedPackId).toBe(pack.id);
+
+        manager.startQuiz(room.code, room.hostToken);
+
+        // Switching packs after quiz started must be rejected
+        expect(() =>
+          manager.selectPack(room.code, room.hostToken, DEFAULT_PACK_ID)
+        ).toThrow();
+
+        const { matchCount } = manager.calculateMatches(
+          room.code,
+          room.hostToken
+        );
+        expect(matchCount).toBe(3);
+
+        const validQuestionIds = new Set(pack.questions.map((q) => q.id));
+        for (const group of room.matches) {
+          expect(group.compatibility).toBeGreaterThanOrEqual(0);
+          expect(group.compatibility).toBeLessThanOrEqual(100);
+          expect(group.sharedHighlights).toHaveLength(2);
+          for (const h of group.sharedHighlights) {
+            expect(validQuestionIds.has(h.questionId)).toBe(true);
+            expect(h.description.length).toBeGreaterThan(0);
+          }
+          expect(validQuestionIds.has(group.spicyDifference.questionId)).toBe(
+            true
+          );
+          expect(group.spicyDifference.description.length).toBeGreaterThan(0);
+        }
+      }
+    } finally {
+      manager.stopGarbageCollector();
     }
   });
 });
